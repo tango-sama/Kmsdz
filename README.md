@@ -92,8 +92,44 @@ For strict global rate limiting on Vercel, swap `src/lib/ratelimit.ts` for Upsta
 | `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_SHEET_NAME` | **yes, for requests to be saved** | Google Sheets |
 | `BLOB_READ_WRITE_TOKEN` | optional | store attachments |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | optional | captcha |
+| `DATABASE_URL` | **yes, for the worker portal** | Neon/Postgres (see 3b) |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | first login only | creates the first administrator (see 3b) |
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | optional | default `213661204590` |
 | `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_URL` | optional | Google Maps → Share → *Embed a map* → copy the `src` URL |
+
+---
+
+## 3b. Worker portal (login, jobs, files, news)
+
+URL: `https://www.kms-dz.com/ar/portal` (French: `/fr/portal`) — linked discreetly from the site footer, `noindex`, not in the sitemap.
+
+**What workers get** — dashboard · *Jobs* (current jobs, status/priority/due date, related files) · *Files* (forms, plans, procedures: search, open in a new tab to **print**, download) · *News* (post, comment; admin can pin/moderate) · own account / password change.
+**What the admin gets (same pages, extra controls)** — create / edit / delete jobs and change their status · upload / edit / delete files · **choose, for every job and file, "all workers" or "selected workers only"** (hidden items are invisible and return 404 to everyone else) · create worker accounts, reset passwords, deactivate (instant sign-out) or delete users · moderate news.
+
+### Setup on Vercel (5 minutes)
+1. Vercel → your project → **Storage → Create Database → Neon (Postgres)** → connect to the project. This sets `DATABASE_URL` automatically. (Any Postgres works; Neon's free tier is plenty.)
+2. Add env vars `ADMIN_USERNAME` (e.g. `boss`) and `ADMIN_PASSWORD` (a temporary password, 8+ chars). Redeploy.
+3. Open `/ar/portal`, sign in with them. You are **forced to choose a new password**; then remove `ADMIN_PASSWORD` from Vercel (it is only used while there are no users).
+4. *Users* page → add each worker. The generated temporary password is shown **once** — give it to the worker (they must change it at first login).
+5. Tables are created automatically; there is nothing to migrate.
+
+### Local preview on your PC
+`npm install` then `npm run dev`, open `http://localhost:3000/ar/portal/login` → `admin` / `ChangeMe123!` (dev only; this default does **not** exist in production). Data is kept in `./.data` (git-ignored) with an embedded Postgres, no account needed.
+
+### Security design
+- Passwords: scrypt (salted, memory-hard), min 8 chars, not containing the username; temporary passwords are random and must be changed.
+- Sessions: random token in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie (`__Host-` prefix in production); only its SHA-256 is stored; 7-day expiry; every request re-checks that the account is still active; changing a password signs out other devices.
+- Brute force: 5 failed attempts per username (or 25 per IP) in 15 min lock sign-in; identical error for unknown user / wrong password / disabled account.
+- CSRF: Server Actions (Next verifies Origin) + SameSite cookies. SQL: parameterised queries only.
+- Files: stored **inside the database (private)**, never at a public URL; served by `/api/portal/files/<id>` only to signed-in users allowed to see them (permission is checked in the same SQL query); type + content (magic bytes) verified; PDFs/images open inline, Office files are download-only; no HTML/SVG/executables.
+- Authorisation is enforced on the server in one place per resource (`src/lib/portal/*`); the UI hiding buttons is cosmetic.
+
+### Limits to know
+- **File size: 4 MB per file** (Vercel request-body limit). Large multi-page plans should be compressed, or tell me and I will add direct-to-storage uploads (Vercel Blob).
+- Files live in Postgres: Neon's free 0.5 GB is ~100+ typical PDFs. 
+- Login throttling uses the database, so it works across serverless instances.
+- Workers are read-only on jobs/files by design (they post only in *News*). Per-worker job "I started / I finished" updates can be added later.
+- There is no e-mail / SMS: password resets are done by the admin (Users → Reset).
 
 ---
 
@@ -106,12 +142,13 @@ For strict global rate limiting on Vercel, swap `src/lib/ratelimit.ts` for Upsta
 - [ ] Confirm the **WhatsApp number** (assumed to be 0661 20 45 90).
 - [ ] Optional: a Privacy Policy page (the quote form has a consent checkbox).
 - [ ] `www.kms-dz.com` DNS → Vercel.
+- [ ] Worker portal: create the Neon database, set `ADMIN_USERNAME`/`ADMIN_PASSWORD` (section 3b).
 
 No certifications, licences, project references, testimonials, statistics or company history were invented.
 
 ## 5. Tests & quality
 
-`npm test` runs 42 tests: API behaviour with a mocked Google (success, header creation, duplicates, 500/403/auth failures,
+`npm test` runs 71 tests (incl. the worker portal: login/lockout/sessions, per-worker visibility, file authorisation, news permissions, SQL-injection attempts) and, before them, API behaviour with a mocked Google (success, header creation, duplicates, 500/403/auth failures,
 honeypot, too-fast, validation, consent, rate limit, formula injection, file sniffing, contact form), Algerian phone rules, i18n key parity.
 Also verified in a real browser (Chromium): RTL/LTR layouts at phone/desktop widths with no horizontal overflow, step validation messages
 in Arabic, file rejection, failure state on a non-configured server (no confirmation shown), success → confirmation, language switch + cookie.

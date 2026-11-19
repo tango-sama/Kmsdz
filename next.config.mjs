@@ -10,8 +10,18 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: { formats: ["image/avif", "image/webp"] },
+  // embedded Postgres used for local preview only (loaded at runtime, not bundled)
+  serverExternalPackages: ["@electric-sql/pglite"],
+  // worker portal: admin file uploads (Vercel itself caps request bodies at ~4.5 MB)
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/:locale(ar|fr)/portal/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }, { key: "Cache-Control", value: "private, no-store" }],
+      },
+    ];
   },
 };
 

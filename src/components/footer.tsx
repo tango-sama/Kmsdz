@@ -86,7 +86,12 @@ export function Footer({ locale }: { locale: Locale }) {
           <p>
             © {year} {d.footer.legal} (KMS). {d.common.rights}
           </p>
-          <p className="ltr-isolate">{company.domain}</p>
+          <p className="flex items-center gap-4">
+            <Link href={`/${locale}/portal`} className="font-semibold text-white/70 transition hover:text-brand">
+              {locale === "ar" ? "فضاء العمال" : "Espace employés"}
+            </Link>
+            <span className="ltr-isolate">{company.domain}</span>
+          </p>
         </div>
       </div>
     </footer>

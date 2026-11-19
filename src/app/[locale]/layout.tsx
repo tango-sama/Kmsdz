@@ -4,15 +4,10 @@ import type { ReactNode } from "react";
 import "@fontsource-variable/cairo/wght.css";
 import "@fontsource-variable/inter/wght.css";
 import "../globals.css";
-import { company, siteUrl, whatsappLink } from "@/config/company";
-import { services } from "@/config/services";
+import { company, siteUrl } from "@/config/company";
 import { getDict } from "@/i18n";
 import { isLocale, localeMeta, locales } from "@/i18n/config";
-import { FloatingActions } from "@/components/floating-actions";
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
 import { I18nProvider } from "@/components/i18n-provider";
-import { JsonLd } from "@/components/json-ld";
 
 export const dynamicParams = false;
 
@@ -32,40 +27,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     title: { default: d.seo.homeTitle, template: `%s` },
     description: d.site.description,
     formatDetection: { telephone: false },
-  };
-}
-
-function localBusinessJsonLd(locale: "ar" | "fr") {
-  const d = getDict(locale);
-  return {
-    "@context": "https://schema.org",
-    "@type": "GeneralContractor",
-    "@id": `${siteUrl}/#business`,
-    name: company.legalName,
-    alternateName: [company.brand, company.nameAr],
-    description: d.site.description,
-    url: siteUrl,
-    logo: `${siteUrl}/images/brand/logo-light.png`,
-    image: `${siteUrl}/og.jpg`,
-    telephone: company.phones.map((p) => p.tel),
-    email: company.email,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: company.city.fr,
-      addressCountry: company.countryCode,
-      ...(company.streetAddress ? { streetAddress: company.streetAddress } : {}),
-    },
-    areaServed: { "@type": "Country", name: "Algeria" },
-    availableLanguage: ["ar", "fr"],
-    knowsAbout: services.map((s) => s.fr.title),
-    hasOfferCatalog: {
-      "@type": "OfferCatalog",
-      name: locale === "ar" ? "خدماتنا" : "Nos services",
-      itemListElement: services.map((s) => ({
-        "@type": "Offer",
-        itemOffered: { "@type": "Service", name: s[locale].title, url: `${siteUrl}/${locale}/services/${s.slug}` },
-      })),
-    },
   };
 }
 
@@ -91,19 +52,8 @@ export default async function LocaleLayout({ children, params }: { children: Rea
             notFound: d.notFound,
           }}
         >
-          <a href="#main" className="sr-only z-[100] rounded-lg bg-brand px-4 py-2 font-bold text-white focus:not-sr-only focus:fixed focus:start-3 focus:top-3">
-            {d.nav.skip}
-          </a>
-          <Header locale={locale} />
-          <main id="main">{children}</main>
-          <Footer locale={locale} />
-          <FloatingActions
-            whatsappHref={whatsappLink(d.contact.waMessage)}
-            phoneHref={`tel:${company.phones[0].tel}`}
-            labels={{ whatsapp: d.common.whatsappAria, call: `${d.common.callUs} ${company.phones[0].display}`, top: d.common.backToTop }}
-          />
+          {children}
         </I18nProvider>
-        <JsonLd data={localBusinessJsonLd(locale)} />
       </body>
     </html>
   );

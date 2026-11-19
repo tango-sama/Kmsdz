@@ -8,3 +8,4 @@ out
 next-env.d.ts
 .vercel
 npm-debug.log*
+.data
