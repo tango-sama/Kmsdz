@@ -10,6 +10,7 @@ import { listWorkers } from "@/lib/portal/users";
 import { FILE_ACCEPT } from "@/lib/portal/filetypes";
 import { FILE_CATEGORIES } from "@/lib/portal/types";
 import { ActionForm } from "@/components/portal/action-form";
+import { FileInput } from "@/components/portal/file-input";
 import { AudiencePicker } from "@/components/portal/audience-picker";
 import { Empty, PageTitle } from "@/components/portal/bits";
 import { deleteFileAction, updateFileAction, uploadFileAction } from "../../actions";
@@ -61,11 +62,11 @@ export default async function FilesPage({ params, searchParams }: { params: Prom
       {isAdmin && (
         <details className="card mb-6 p-5" open={files.length === 0}>
           <summary className="flex cursor-pointer items-center gap-2 font-extrabold"><Upload className="h-5 w-5 text-brand" aria-hidden />{t.files.upload}</summary>
-          <ActionForm action={uploadFileAction} encType="multipart/form-data" className="mt-5 space-y-5" submitLabel={t.common.add} successMessage={t.common.created} resetOnSuccess>
+          <ActionForm action={uploadFileAction} className="mt-5 space-y-5" submitLabel={t.common.add} successMessage={t.common.created} resetOnSuccess>
             <FileFields t={t} jobs={jobs} />
             <div>
               <label className="label" htmlFor="file">{t.files.fields.file}</label>
-              <input id="file" name="file" type="file" required accept={FILE_ACCEPT} className="field !p-2.5" />
+              <FileInput accept={FILE_ACCEPT} />
               <p className="mt-1.5 text-xs text-ink-500">{t.files.limits}</p>
             </div>
             <AudiencePicker workers={workers} />

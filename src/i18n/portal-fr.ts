@@ -147,6 +147,7 @@ export const portalFr: PortalDict = {
     FILE_REQUIRED: "Veuillez choisir un fichier.",
     FILE_TYPE: "Type de fichier non autorisé ou contenu différent de l'extension.",
     FILE_SIZE: "Fichier trop volumineux (4 Mo maximum).",
+    NETWORK: "Opération impossible (connexion ou taille du fichier). Vérifiez votre connexion et que le fichier fait moins de 4 Mo, puis réessayez.",
     UNKNOWN: "Une erreur inattendue s'est produite.",
   },
 };

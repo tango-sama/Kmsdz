@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, Check, CheckCircle2, Copy, KeyRound, Loader2 } from "lucide-react";
 import type { ActionState } from "@/lib/portal/action-types";
 import { usePortal } from "./portal-provider";
@@ -16,12 +16,22 @@ type Props = {
   confirm?: string;
   hideSubmit?: boolean;
   inline?: boolean; // compact (no message box; errors as small text)
-  encType?: string;
 };
 
-export function ActionForm({ action, children, className = "", submitLabel, submitClassName = "btn btn-primary", successMessage, resetOnSuccess, confirm, hideSubmit, inline, encType }: Props) {
+export function ActionForm({ action, children, className = "", submitLabel, submitClassName = "btn btn-primary", successMessage, resetOnSuccess, confirm, hideSubmit, inline }: Props) {
   const { locale, t } = usePortal();
-  const [state, formAction, pending] = useActionState(action, null);
+  // Any thrown error (413 from the host for an oversized upload, network drop, deploy mismatch...) becomes a
+  // visible message instead of crashing the page. Redirects must pass through untouched.
+  const safeAction = async (prev: ActionState, fd: FormData): Promise<ActionState> => {
+    try {
+      return await action(prev, fd);
+    } catch (e) {
+      const digest = (e as { digest?: string } | null)?.digest;
+      if (typeof digest === "string" && digest.startsWith("NEXT_")) throw e;
+      return { error: "NETWORK", nonce: Date.now() };
+    }
+  };
+  const [state, formAction, pending] = useActionState(safeAction, null);
   const ref = useRef<HTMLFormElement>(null);
   const [shown, setShown] = useState<number | null>(null);
 
@@ -42,11 +52,14 @@ export function ActionForm({ action, children, className = "", submitLabel, subm
   return (
     <form
       ref={ref}
-      action={formAction}
-      encType={encType}
       className={className}
+      // Submitted by hand (not via <form action>) so React 19 does not wipe the fields after an error:
+      // the user keeps the chosen file and text and can simply retry.
       onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
+        e.preventDefault();
+        if (confirm && !window.confirm(confirm)) return;
+        const fd = new FormData(e.currentTarget);
+        startTransition(() => formAction(fd));
       }}
     >
       <input type="hidden" name="locale" value={locale} />
