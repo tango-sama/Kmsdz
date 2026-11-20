@@ -125,7 +125,7 @@ URL: `https://www.kms-dz.com/ar/portal` (French: `/fr/portal`) — linked discre
 - Authorisation is enforced on the server in one place per resource (`src/lib/portal/*`); the UI hiding buttons is cosmetic.
 
 ### Limits to know
-- **File size: 4 MB per file** (Vercel request-body limit). Large multi-page plans should be compressed, or tell me and I will add direct-to-storage uploads (Vercel Blob).
+- **File size: 4 MB per file** (Vercel request-body limit). JPG/PNG images are converted to **WebP in the browser at their full original resolution** (only the compression quality is lowered until they fit; pixels are reduced only as an absolute last resort, and the admin is told when that happens). If WebP would not make a small image smaller, the original is kept. PDFs/Office files are never converted. Large multi-page plans should be compressed, or tell me and I will add direct-to-storage uploads (Vercel Blob).
 - Files live in Postgres: Neon's free 0.5 GB is ~100+ typical PDFs. 
 - Login throttling uses the database, so it works across serverless instances.
 - Workers are read-only on jobs/files by design (they post only in *News*). Per-worker job "I started / I finished" updates can be added later.
