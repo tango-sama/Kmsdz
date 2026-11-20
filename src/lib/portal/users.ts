@@ -18,7 +18,7 @@ export async function listUsers(actor: Actor): Promise<UserRow[]> {
   assertAdmin(actor);
   const db = await getDb();
   const rows = await db.query(
-    "select id, username, full_name, role, active, must_change_password, created_at, last_login_at from users order by role, full_name",
+    "select id, username, full_name, role, active, must_change_password, created_at, last_login_at from users order by (role = 'customer'), role, full_name limit 2000",
   );
   return rows.map((r) => ({
     id: r.id, username: r.username, fullName: r.full_name, role: r.role, active: r.active,

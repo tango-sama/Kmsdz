@@ -17,7 +17,7 @@ export async function createSession(userId: string): Promise<{ token: string; ex
   return { token, expires };
 }
 
-type ActorRow = { id: string; username: string; full_name: string; role: "admin" | "worker"; must_change_password: boolean };
+type ActorRow = { id: string; username: string; full_name: string; role: Actor["role"]; must_change_password: boolean };
 
 /** Valid only if the session is unexpired AND the account is still active (deactivation takes effect immediately). */
 export async function getActorByToken(token: string | undefined | null): Promise<Actor | null> {

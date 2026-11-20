@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const actor = await getCurrentActor();
   if (!actor || actor.mustChangePassword) return new NextResponse("Unauthorized", { status: 401, headers: { "Cache-Control": "no-store" } });
+  if (actor.role === "customer") return new NextResponse("Forbidden", { status: 403, headers: { "Cache-Control": "no-store" } });
 
   const { id } = await params;
   const file = await getFileForDownload(actor, id);

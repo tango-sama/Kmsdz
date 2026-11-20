@@ -35,10 +35,26 @@ export const getCurrentActor = cache(async (): Promise<Actor | null> => {
   }
 });
 
-export async function requireActor(locale: Locale, opts: { allowMustChange?: boolean } = {}): Promise<Actor> {
+/** Where a signed-in user belongs: staff (admin/worker) -> the portal dashboard, website customers -> their account page. */
+export function homeFor(actor: Pick<Actor, "role" | "mustChangePassword">, locale: Locale): string {
+  if (actor.role === "customer") return `/${locale}/account`;
+  return `/${locale}/portal${actor.mustChangePassword ? "/account" : ""}`;
+}
+
+/** Portal guard: staff only. A signed-in customer is sent to their own account page, never into the portal. */
+export async function requireActor(locale: Locale, opts: { allowMustChange?: boolean; allowCustomer?: boolean } = {}): Promise<Actor> {
   const actor = await getCurrentActor();
   if (!actor) redirect(`/${locale}/portal/login`);
+  if (actor.role === "customer" && !opts.allowCustomer) redirect(`/${locale}/account`);
   if (actor.mustChangePassword && !opts.allowMustChange) redirect(`/${locale}/portal/account`);
+  return actor;
+}
+
+/** Customer-area guard: signed-in customers only. Staff are sent to the portal. */
+export async function requireCustomer(locale: Locale): Promise<Actor> {
+  const actor = await getCurrentActor();
+  if (!actor) redirect(`/${locale}/login`);
+  if (actor.role !== "customer") redirect(homeFor(actor, locale));
   return actor;
 }
 

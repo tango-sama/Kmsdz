@@ -26,7 +26,8 @@ async function isLocked(username: string, ip: string): Promise<boolean> {
 /** First run only: create the first administrator from ADMIN_USERNAME / ADMIN_PASSWORD when the users table is empty. */
 export async function ensureBootstrapAdmin() {
   const db = await getDb();
-  const [{ c }] = await db.query<{ c: number }>("select count(*)::int as c from users");
+  // customers may sign up before anyone ever logs in, so look for an administrator, not for "any user"
+  const [{ c }] = await db.query<{ c: number }>("select count(*)::int as c from users where role = 'admin'");
   if (c > 0) return;
   const dev = process.env.NODE_ENV !== "production";
   const username = normalizeUsername(process.env.ADMIN_USERNAME || (dev ? "admin" : ""));
@@ -43,10 +44,10 @@ export async function login(usernameRaw: string, password: string, ip: string): 
   const db = await getDb();
   await ensureBootstrapAdmin();
   const username = normalizeUsername(usernameRaw);
-  if (!username || !password || username.length > 64 || password.length > 128) throw new PortalError("INVALID_CREDENTIALS");
+  if (!username || !password || username.length > 254 || password.length > 128) throw new PortalError("INVALID_CREDENTIALS");
   if (await isLocked(username, ip)) throw new PortalError("LOCKED");
 
-  const rows = await db.query<{ id: string; password_hash: string; full_name: string; role: "admin" | "worker"; must_change_password: boolean; active: boolean }>(
+  const rows = await db.query<{ id: string; password_hash: string; full_name: string; role: Actor["role"]; must_change_password: boolean; active: boolean }>(
     "select id, password_hash, full_name, role, must_change_password, active from users where username = $1",
     [username],
   );

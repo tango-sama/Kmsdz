@@ -42,9 +42,11 @@ export function Header({ locale }: { locale: Locale }) {
             locale={locale}
             items={items}
             quoteHref={`/${locale}/quote`}
+            loginHref={`/${locale}/login`}
             phone={company.phones[0]}
             labels={{
               quote: d.nav.quote,
+              login: d.nav.login,
               openMenu: d.nav.openMenu,
               closeMenu: d.nav.closeMenu,
               menu: d.nav.menu,

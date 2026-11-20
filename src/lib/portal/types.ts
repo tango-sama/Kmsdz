@@ -1,4 +1,6 @@
-export type Role = "admin" | "worker";
+/** admin / worker are created ONLY by an administrator. customer is the only role a visitor can create by signing up. */
+export type Role = "admin" | "worker" | "customer";
+export type StaffRole = Exclude<Role, "customer">;
 export type Actor = { id: string; role: Role; username: string; fullName: string; mustChangePassword: boolean };
 
 export const JOB_STATUSES = ["new", "in_progress", "on_hold", "done"] as const;
@@ -18,10 +20,17 @@ export class PortalError extends Error {
 export type PortalErrorCode =
   | "VALIDATION" | "FORBIDDEN" | "NOT_FOUND" | "USERNAME_TAKEN" | "WEAK_PASSWORD" | "PASSWORD_MISMATCH"
   | "WRONG_PASSWORD" | "LAST_ADMIN" | "SELF" | "FILE_REQUIRED" | "FILE_TYPE" | "FILE_SIZE"
-  | "INVALID_CREDENTIALS" | "LOCKED" | "NOT_CONFIGURED" | "UNKNOWN";
+  | "INVALID_CREDENTIALS" | "LOCKED" | "NOT_CONFIGURED" | "EMAIL_TAKEN" | "TOO_MANY" | "UNKNOWN";
+
+export const isStaff = (actor: Pick<Actor, "role">) => actor.role === "admin" || actor.role === "worker";
 
 export function assertAdmin(actor: Actor) {
   if (actor.role !== "admin") throw new PortalError("FORBIDDEN");
+}
+
+/** Portal data (jobs, files, news) is for staff only: website customers never get in. */
+export function assertStaff(actor: Actor) {
+  if (!isStaff(actor)) throw new PortalError("FORBIDDEN");
 }
 
 /**
@@ -31,6 +40,7 @@ export function assertAdmin(actor: Actor) {
  */
 export function visibleSql(actor: Actor, kind: "job" | "file", alias: string, paramIndex: number): { sql: string; params: unknown[] } {
   if (actor.role === "admin") return { sql: "true", params: [] };
+  if (actor.role === "customer") return { sql: "false", params: [] };
   return {
     sql: `(${alias}.audience = 'all' or exists (select 1 from grants g where g.kind = '${kind}' and g.item_id = ${alias}.id and g.user_id = $${paramIndex}))`,
     params: [actor.id],

@@ -5,7 +5,7 @@ import { Lock, ShieldCheck } from "lucide-react";
 import { getPortalDict } from "@/i18n/portal";
 import { isLocale } from "@/i18n/config";
 import { getDict } from "@/i18n";
-import { getCurrentActor } from "@/lib/auth/server";
+import { getCurrentActor, homeFor } from "@/lib/auth/server";
 import { isDbConfigured } from "@/lib/db";
 import { ActionForm } from "@/components/portal/action-form";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -14,7 +14,8 @@ import { loginAction } from "../actions";
 export default async function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  if (await getCurrentActor()) redirect(`/${locale}/portal`);
+  const me = await getCurrentActor();
+  if (me) redirect(homeFor(me, locale));
   const t = getPortalDict(locale);
   const d = getDict(locale);
   const configured = isDbConfigured();

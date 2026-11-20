@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import { isLocale, type Locale } from "@/i18n/config";
 import { login } from "@/lib/auth/login";
 import { deleteSession } from "@/lib/auth/session";
-import { clearSessionCookie, clientIp, getSessionToken, requireActor, requireAdmin, setSessionCookie } from "@/lib/auth/server";
+import { clearSessionCookie, clientIp, getSessionToken, homeFor, requireActor, requireAdmin, setSessionCookie } from "@/lib/auth/server";
+import { registerCustomer } from "@/lib/auth/register";
+import { rateLimit } from "@/lib/ratelimit";
 import { isDbConfigured } from "@/lib/db";
 import { PortalError } from "@/lib/portal/types";
 import type { ActionState } from "@/lib/portal/action-types";
@@ -31,18 +33,36 @@ const audienceOf = (fd: FormData) => ({ audience: str(fd, "audience") === "selec
 
 export async function loginAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const locale = localeOf(fd);
-  let mustChange = false;
+  let target = "";
   try {
     if (!isDbConfigured()) throw new PortalError("NOT_CONFIGURED");
     const r = await login(str(fd, "username"), str(fd, "password"), await clientIp());
     await setSessionCookie(r.token, r.expires);
-    mustChange = r.actor.mustChangePassword;
+    target = homeFor(r.actor, locale); // staff -> /portal (dashboard), customer -> /account
   } catch (e) {
     if (e instanceof PortalError) return fail(e);
     console.error("[portal] login failed:", e instanceof Error ? e.message : "unknown");
     return { error: "NOT_CONFIGURED", nonce: Date.now() };
   }
-  redirect(`/${locale}/portal${mustChange ? "/account" : ""}`);
+  redirect(target);
+}
+
+/** Public sign-up: always creates a "customer". Staff accounts can only be created by an administrator (createUserAction). */
+export async function signupAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const locale = localeOf(fd);
+  try {
+    if (!isDbConfigured()) throw new PortalError("NOT_CONFIGURED");
+    const ip = await clientIp();
+    if (!rateLimit(`signup:${ip}`, 5, 60 * 60_000).ok) throw new PortalError("TOO_MANY");
+    if (str(fd, "website")) throw new PortalError("VALIDATION"); // honeypot: real people leave it empty
+    const r = await registerCustomer({ fullName: str(fd, "fullName"), email: str(fd, "email"), password: str(fd, "password"), confirm: str(fd, "confirm") }, ip);
+    await setSessionCookie(r.token, r.expires);
+  } catch (e) {
+    if (e instanceof PortalError) return fail(e);
+    console.error("[auth] signup failed:", e instanceof Error ? e.message : "unknown");
+    return { error: "NOT_CONFIGURED", nonce: Date.now() };
+  }
+  redirect(`/${locale}/account`);
 }
 
 export async function logoutAction(fd: FormData) {
@@ -50,21 +70,23 @@ export async function logoutAction(fd: FormData) {
   const token = await getSessionToken();
   if (token) await deleteSession(token).catch(() => {});
   await clearSessionCookie();
-  redirect(`/${locale}/portal/login`);
+  redirect(`/${locale}${fd.get("from") === "site" ? "" : "/portal"}/login`);
 }
 
 export async function changePasswordAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const locale = localeOf(fd);
   let wasForced = false;
+  let customer = false;
   try {
-    const me = await requireActor(locale, { allowMustChange: true });
+    const me = await requireActor(locale, { allowMustChange: true, allowCustomer: true });
     wasForced = me.mustChangePassword;
+    customer = me.role === "customer";
     await users.changeOwnPassword(me, str(fd, "current"), str(fd, "next"), str(fd, "confirm"), await getSessionToken());
   } catch (e) {
     return fail(e);
   }
   refresh(locale);
-  if (wasForced) redirect(`/${locale}/portal`);
+  if (wasForced) redirect(customer ? `/${locale}/account` : `/${locale}/portal`);
   return done();
 }
 

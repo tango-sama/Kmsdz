@@ -14,6 +14,7 @@ export const fr: Dict = {
     services: "Nos services",
     quote: "Demander un devis",
     contact: "Contact",
+    login: "Connexion",
     menu: "Menu",
     openMenu: "Ouvrir le menu",
     closeMenu: "Fermer le menu",

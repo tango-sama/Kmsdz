@@ -12,6 +12,7 @@ export const ar = {
     services: "خدماتنا",
     quote: "اطلب عرض سعر",
     contact: "اتصل بنا",
+    login: "دخول",
     menu: "القائمة",
     openMenu: "فتح القائمة",
     closeMenu: "إغلاق القائمة",

@@ -106,6 +106,18 @@ URL: `https://www.kms-dz.com/ar/portal` (French: `/fr/portal`) — linked discre
 **What workers get** — dashboard · *Jobs* (current jobs, status/priority/due date, related files) · *Files* (forms, plans, procedures: search, open in a new tab to **print**, download) · *News* (post, comment; admin can pin/moderate) · own account / password change.
 **What the admin gets (same pages, extra controls)** — create / edit / delete jobs and change their status · upload / edit / delete files · **choose, for every job and file, "all workers" or "selected workers only"** (hidden items are invisible and return 404 to everyone else) · create worker accounts, reset passwords, deactivate (instant sign-out) or delete users · moderate news.
 
+### Website sign-up & one login for everyone
+`/ar/login` (French `/fr/login`) is the single sign-in page, linked in the site header; `/ar/signup` creates an account.
+
+| Who | How the account is created | After signing in |
+|---|---|---|
+| **Customer** (any visitor) | Signs up themselves with name + e-mail + password. Always gets the `customer` role. | `/account` on the website (profile, change password, quick links to quote/contact). **Cannot** open the portal, files, jobs or news (redirected; the file API answers 403). |
+| **Worker** / **Admin** | **Only an administrator** (*Users* page). There is no way to become staff by signing up: the role is fixed server-side and the database rejects anything else. | The **portal dashboard** (`/portal`). |
+
+- A customer's e-mail address is their login name (case-insensitive). Admins see all customers in a separate section of the *Users* page and can reset a password, deactivate or delete them.
+- Sign-up is protected by a hidden honeypot field and a limit of 5 sign-ups per IP per hour (per server instance). **No e-mail verification** is done yet (the site has no mail service); a customer account grants no access to anything, so a fake address only creates an unused account. Tell me if you want verification / "forgot password" by e-mail (needs a mail provider such as Resend).
+- Existing databases are upgraded automatically on first start (the `users.role` check is widened to include `customer`).
+
 ### Setup on Vercel (5 minutes)
 1. Vercel → your project → **Storage → Create Database → Neon (Postgres)** → connect to the project. This sets `DATABASE_URL` automatically. (Any Postgres works; Neon's free tier is plenty.)
 2. Add env vars `ADMIN_USERNAME` (e.g. `boss`) and `ADMIN_PASSWORD` (a temporary password, 8+ chars). Redeploy.
@@ -148,7 +160,7 @@ No certifications, licences, project references, testimonials, statistics or com
 
 ## 5. Tests & quality
 
-`npm test` runs 71 tests (incl. the worker portal: login/lockout/sessions, per-worker visibility, file authorisation, news permissions, SQL-injection attempts) and, before them, API behaviour with a mocked Google (success, header creation, duplicates, 500/403/auth failures,
+`npm test` runs 80 tests (incl. the worker portal: login/lockout/sessions, per-worker visibility, file authorisation, news permissions, SQL-injection attempts) and, before them, API behaviour with a mocked Google (success, header creation, duplicates, 500/403/auth failures,
 honeypot, too-fast, validation, consent, rate limit, formula injection, file sniffing, contact form), Algerian phone rules, i18n key parity.
 Also verified in a real browser (Chromium): RTL/LTR layouts at phone/desktop widths with no horizontal overflow, step validation messages
 in Arabic, file rejection, failure state on a non-configured server (no confirmation shown), success → confirmation, language switch + cookie.

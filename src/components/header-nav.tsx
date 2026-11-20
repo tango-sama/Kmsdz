@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Phone } from "lucide-react";
+import { Menu, X, Phone, User } from "lucide-react";
 import { LanguageSwitcher } from "./language-switcher";
 import type { Locale } from "@/i18n/config";
 
@@ -12,11 +12,12 @@ type Props = {
   locale: Locale;
   items: Item[];
   quoteHref: string;
-  labels: { quote: string; openMenu: string; closeMenu: string; menu: string; switchTo: string; switchAria: string; main: string; call: string };
+  loginHref: string;
+  labels: { quote: string; login: string; openMenu: string; closeMenu: string; menu: string; switchTo: string; switchAria: string; main: string; call: string };
   phone: { display: string; tel: string };
 };
 
-export function HeaderNav({ locale, items, quoteHref, labels, phone }: Props) {
+export function HeaderNav({ locale, items, quoteHref, loginHref, labels, phone }: Props) {
   const pathname = usePathname() || "";
   const [open, setOpen] = useState(false);
 
@@ -50,6 +51,10 @@ export function HeaderNav({ locale, items, quoteHref, labels, phone }: Props) {
 
       <div className="flex items-center gap-2 sm:gap-3">
         <LanguageSwitcher locale={locale} label={labels.switchTo} ariaLabel={labels.switchAria} className="hidden sm:inline-flex" />
+        <Link href={loginHref} className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-[15px] font-bold text-ink-700 transition hover:text-brand lg:inline-flex">
+          <User className="h-4 w-4" aria-hidden />
+          {labels.login}
+        </Link>
         <Link href={quoteHref} className="btn btn-primary hidden !py-2.5 lg:inline-flex">
           {labels.quote}
         </Link>
@@ -101,6 +106,10 @@ export function HeaderNav({ locale, items, quoteHref, labels, phone }: Props) {
           <div className="mt-auto space-y-3 pt-8">
             <Link href={quoteHref} tabIndex={open ? 0 : -1} className="btn btn-primary btn-lg w-full">
               {labels.quote}
+            </Link>
+            <Link href={loginHref} tabIndex={open ? 0 : -1} className="btn btn-ghost w-full">
+              <User className="h-5 w-5" aria-hidden />
+              {labels.login}
             </Link>
             <a href={`tel:${phone.tel}`} tabIndex={open ? 0 : -1} className="btn btn-ghost w-full">
               <Phone className="h-5 w-5" aria-hidden />

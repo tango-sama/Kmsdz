@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { assertAdmin, isUuid, PortalError, type Actor } from "./types";
+import { assertAdmin, assertStaff, isUuid, PortalError, type Actor } from "./types";
 
 export type Comment = { id: string; authorId: string; authorName: string; body: string; createdAt: Date };
 export type Post = { id: string; authorId: string; authorName: string; authorRole: "admin" | "worker"; title: string; body: string; pinned: boolean; createdAt: Date; comments: Comment[] };
@@ -31,6 +31,7 @@ export async function listPosts(limit = 30): Promise<Post[]> {
 }
 
 export async function createPost(actor: Actor, input: { title?: string; body: string }) {
+  assertStaff(actor);
   const p = postSchema.safeParse(input);
   if (!p.success) throw new PortalError("VALIDATION");
   const db = await getDb();
@@ -39,6 +40,7 @@ export async function createPost(actor: Actor, input: { title?: string; body: st
 }
 
 export async function addComment(actor: Actor, postId: string, body: string) {
+  assertStaff(actor);
   const b = commentSchema.safeParse(body);
   if (!b.success || !isUuid(postId)) throw new PortalError("VALIDATION");
   const db = await getDb();
@@ -48,6 +50,7 @@ export async function addComment(actor: Actor, postId: string, body: string) {
 
 /** Authors can delete their own posts; admins can delete anything. */
 export async function deletePost(actor: Actor, postId: string) {
+  assertStaff(actor);
   if (!isUuid(postId)) throw new PortalError("NOT_FOUND");
   const db = await getDb();
   const rows = await db.query("delete from posts where id = $1 and ($2 = 'admin' or author_id = $3) returning id", [postId, actor.role, actor.id]);
@@ -55,6 +58,7 @@ export async function deletePost(actor: Actor, postId: string) {
 }
 
 export async function deleteComment(actor: Actor, commentId: string) {
+  assertStaff(actor);
   if (!isUuid(commentId)) throw new PortalError("NOT_FOUND");
   const db = await getDb();
   const rows = await db.query("delete from comments where id = $1 and ($2 = 'admin' or author_id = $3) returning id", [commentId, actor.role, actor.id]);

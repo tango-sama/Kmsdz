@@ -4,13 +4,20 @@ export const SCHEMA_STATEMENTS: string[] = [
     id uuid primary key default gen_random_uuid(),
     username text not null unique,
     full_name text not null,
-    role text not null check (role in ('admin','worker')),
+    role text not null check (role in ('admin','worker','customer')),
     password_hash text not null,
     must_change_password boolean not null default true,
     active boolean not null default true,
     created_at timestamptz not null default now(),
     last_login_at timestamptz
   )`,
+  // databases created before customer sign-up existed carry the old two-role check: widen it once
+  `do $$ begin
+    if not exists (select 1 from pg_constraint where conname = 'users_role_check' and pg_get_constraintdef(oid) like '%customer%') then
+      alter table users drop constraint if exists users_role_check;
+      alter table users add constraint users_role_check check (role in ('admin','worker','customer'));
+    end if;
+  end $$`,
   `create table if not exists sessions (
     token_hash text primary key,
     user_id uuid not null references users(id) on delete cascade,

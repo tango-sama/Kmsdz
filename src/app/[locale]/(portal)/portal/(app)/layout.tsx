@@ -16,6 +16,7 @@ export default async function AppLayout({ children, params }: { children: ReactN
   if (!isLocale(locale)) notFound();
   const actor = await getCurrentActor();
   if (!actor) redirect(`/${locale}/portal/login`);
+  if (actor.role === "customer") redirect(`/${locale}/account`); // the portal is for admins and workers only
   const t = getPortalDict(locale);
   const d = getDict(locale);
   const base = `/${locale}/portal`;

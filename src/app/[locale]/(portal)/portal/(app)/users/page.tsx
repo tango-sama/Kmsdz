@@ -15,23 +15,9 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
   const t = getPortalDict(locale);
   const users = await listUsers(me);
   const u = t.users;
-
-  return (
-    <>
-      <PageTitle title={u.title} lead={u.lead} />
-      <ActionForm action={createUserAction} className="card mb-8 space-y-4 p-5" submitLabel={<><UserPlus className="h-4 w-4" aria-hidden />{u.add}</>} resetOnSuccess>
-        <h2 className="font-extrabold">{u.add}</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div><label className="label" htmlFor="fullName">{u.fields.fullName}</label><input id="fullName" name="fullName" required minLength={2} maxLength={80} className="field" /></div>
-          <div><label className="label" htmlFor="username">{u.fields.username}</label><input id="username" name="username" required pattern="[a-zA-Z0-9._\-]{3,32}" maxLength={32} dir="ltr" autoCapitalize="none" className="field text-start" /></div>
-          <div><label className="label" htmlFor="role">{u.fields.role}</label>
-            <select id="role" name="role" defaultValue="worker" className="field"><option value="worker">{t.roles.worker}</option><option value="admin">{t.roles.admin}</option></select></div>
-        </div>
-        <p className="text-xs text-ink-500">{u.usernameHint}</p>
-      </ActionForm>
-
-      <ul className="space-y-3">
-        {users.map((x) => {
+  const staff = users.filter((x) => x.role !== "customer");
+  const customers = users.filter((x) => x.role === "customer");
+  const renderUser = (x: (typeof users)[number]) => {
           const self = x.id === me.id;
           return (
             <li key={x.id} className={`card p-5 ${x.active ? "" : "opacity-70"}`}>
@@ -62,7 +48,28 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
               )}
             </li>
           );
-        })}
+  };
+
+  return (
+    <>
+      <PageTitle title={u.title} lead={u.lead} />
+      <ActionForm action={createUserAction} className="card mb-8 space-y-4 p-5" submitLabel={<><UserPlus className="h-4 w-4" aria-hidden />{u.add}</>} resetOnSuccess>
+        <h2 className="font-extrabold">{u.add}</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div><label className="label" htmlFor="fullName">{u.fields.fullName}</label><input id="fullName" name="fullName" required minLength={2} maxLength={80} className="field" /></div>
+          <div><label className="label" htmlFor="username">{u.fields.username}</label><input id="username" name="username" required pattern="[a-zA-Z0-9._\-]{3,32}" maxLength={32} dir="ltr" autoCapitalize="none" className="field text-start" /></div>
+          <div><label className="label" htmlFor="role">{u.fields.role}</label>
+            <select id="role" name="role" defaultValue="worker" className="field"><option value="worker">{t.roles.worker}</option><option value="admin">{t.roles.admin}</option></select></div>
+        </div>
+        <p className="text-xs text-ink-500">{u.usernameHint}</p>
+      </ActionForm>
+
+      <ul className="space-y-3">{staff.map(renderUser)}</ul>
+
+      <h2 className="mb-1 mt-10 text-xl font-extrabold">{u.customersTitle} <span className="text-base font-bold text-ink-500">({customers.length})</span></h2>
+      <p className="mb-4 text-sm text-ink-500">{u.customersLead}</p>
+      <ul className="space-y-3">
+        {customers.length === 0 ? <li className="card p-5 text-sm text-ink-500">{u.noCustomers}</li> : customers.map(renderUser)}
       </ul>
     </>
   );
